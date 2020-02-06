@@ -1,19 +1,5 @@
 #include "Display.h"
 
-// int DisplayBoard::print(){
-//     for (int i = 0; i < this->board->getNumOfRow(); i++){
-//         for (int j = 0; j < this->board->getNumOfCol(); j++){
-//             Piece* piece = this->board->getSquare(Position(i,j)).getPiece();
-//             if (piece != NULL){
-//                 std::cout << (char)piece->getColor();
-//             }
-//             else std::cout << (char)Color::none;
-//         }
-//         std::cout << '\n';
-//     }
-//     return 0;
-// }
-
 int DisplayMenu::print(){
     if (this->menu == NULL) return 1;
     std::cout << this->menu->getCurrentData()->getTitle() << std::endl;

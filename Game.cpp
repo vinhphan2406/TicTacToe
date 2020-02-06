@@ -312,9 +312,9 @@ int RunGameCommand::execute(){
     return 0;
 }
 
-StartGameMenu::StartGameMenu(std::string _title, std::string _desc){
-    insertNode(new MenuComponent(_title, _desc));
-    insertNode(new MenuComponent("Start"));
-    getChildData(0)->loadNextAction(new RunGameCommand());
-    insertNode(new MenuComponent("Exit"));
-}
+// StartGameMenu::StartGameMenu(std::string _title, std::string _desc){
+//     insertNode(new MenuComponent(_title, _desc));
+//     insertNode(new MenuComponent("Start"));
+//     getChildData(0)->loadNextAction(new RunGameCommand());
+//     insertNode(new MenuComponent("Exit"));
+// }

@@ -7,8 +7,8 @@
 
 #include <vector>
 
-#define BOARD_DIM_1 8
-#define BOARD_DIM_2 8
+#define BOARD_DIM_1 2
+#define BOARD_DIM_2 2
 
 #define WIN_CONDITION 5
 
@@ -74,8 +74,6 @@ class TicTacToe : public ICore {
         bool makeMove(Position) override;
         int getNumOfTurns() const override;
 };
-
-
 
 class MakeMoveCommand : public ICommand{
     private:
@@ -215,10 +213,11 @@ class RunGameCommand : public ICommand {
 #ifndef START_GAME_MENU_H
 #define START_GAME_MENU_H
 
-class StartGameMenu : public Tree<MenuComponent>{
+class StartGameMenu{
+    private:
+        Tree<MenuComponent>* menu;
     public:
-        StartGameMenu(std::string _title = "", std::string _desc = "");
-        bool isRunning;
+
 };
 
 #endif

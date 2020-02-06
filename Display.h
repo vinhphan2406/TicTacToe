@@ -17,17 +17,6 @@ class IDisplay{
         virtual int print() = 0;
 };
 
-// class DisplayBoard : public IDisplay{
-//     private:
-//         Board* board;
-//     public:
-//         DisplayBoard(Board* _board): board(_board){}
-//         // Print board to console output
-//         // OUTPUT:
-//         //  - 0: success
-//         int print() override;
-// };
-
 class DisplayMenu : public IDisplay{
     private:
         Tree<MenuComponent>* menu;

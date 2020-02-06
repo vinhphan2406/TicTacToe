@@ -1,5 +1,7 @@
 #include "GameObj.h"
 
+#include <fstream>
+
 class IInput {
     public:
         virtual ~IInput() = default;
@@ -12,4 +14,8 @@ class InputPosition : public IInput {
     public:
         InputPosition(std::string _message = "Input position: ");
         Position input() override;
+};
+
+class InputJSONFile {
+    
 };

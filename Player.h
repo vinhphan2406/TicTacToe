@@ -3,7 +3,9 @@
 
 #include "GameObj.h"
 #include "Command.h"
+
 #include <queue>
+#include <memory>
 
 class Player {
     private:
@@ -21,7 +23,7 @@ class Player {
         bool operator==(const Player& _player) const {
             return this->id == _player.id;
         }
-        int getID(){
+        int64_t getID(){
             return this->id;
         }
         Color getColor(){
