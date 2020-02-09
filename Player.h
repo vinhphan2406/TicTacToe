@@ -44,7 +44,7 @@ class Player {
         //  + -1: no command in queue
         //  + n > 0: error code of command
         //  + 0: success
-        int executeCommand();
+        ICommand::Result executeCommand();
         // // Pop command off command queue
         // // OUTPUT:
         // //  + true: success

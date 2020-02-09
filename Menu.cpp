@@ -11,16 +11,17 @@ bool MenuComponent::removeLastAction(){
     return true;
 }
 
-int MenuComponent::doAction(){
-    int result = 0;
+ICommand::Result MenuComponent::doAction(){
+    if (this->commands.empty()) return ICommand::Result::NO_COMMAND;
+    ICommand::Result result;
     for (std::vector<ICommand*>::iterator it = this->commands.begin(); it != this->commands.end(); it++){
         if ((*it) != NULL) result = (*it)->execute();
-        if (result != 0) break;
+        if (result != ICommand::Result::SUCCESS) break;
     }
     return result;
 }
 
-int ChooseOptionCommand::execute(){
+ICommand::Result ChooseOptionCommand::execute(){
     if (this->menu->hasChild()){
         try {
             this->menu->moveDown(this->option);
@@ -29,11 +30,11 @@ int ChooseOptionCommand::execute(){
         }
         catch (std::invalid_argument& e){
             std::cout << e.what() << std::endl;
-            return 1;
+            return Result::OUT_OF_RANGE;
         }
         catch (std::out_of_range& e){
             std::cout << e.what() << std::endl;
-            return 2;
+            return Result::NOT_INITIALIZED;
         }
     }
     else {
@@ -42,20 +43,20 @@ int ChooseOptionCommand::execute(){
         }
         catch (std::invalid_argument& e){
             std::cout << e.what() << std::endl;
-            return 1;
+            return Result::OUT_OF_RANGE;
         }
     }
-    return 0;
+    return Result::SUCCESS;
 }
 
-int ReturnPreviousMenu::execute(){
+ICommand::Result ReturnPreviousMenu::execute(){
     if (this->menu->hasChild() == true){
         this->menu->moveUp();
-        if (this->menu->moveUp() == false) return 1;
+        if (this->menu->moveUp() == false) return Result::OUT_OF_RANGE;
     }
     else {
         this->menu->moveUp();
     }
-    return 0;
+    return Result::SUCCESS;
 }
 

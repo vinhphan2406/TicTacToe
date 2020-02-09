@@ -264,7 +264,7 @@ class MenuComponent{
         bool getHiddenState(){
             return this->isHidden;
         }
-        int doAction();
+        ICommand::Result doAction();
         bool loadNextAction(ICommand* _command);
         bool removeLastAction();
 
@@ -281,7 +281,7 @@ class ChooseOptionCommand : public ICommand{
         //  - 0: success
         //  - 1: execute command error
         //  - 2: invalid option value
-        int execute() override;
+        Result execute() override;
 };
 
 class ReturnPreviousMenu : public ICommand{
@@ -293,7 +293,7 @@ class ReturnPreviousMenu : public ICommand{
         // OUTPUT:
         //  - 0: success
         //  - 1: no upper menu available
-        int execute() override;
+        Result execute() override;
 };
 
 // class MenuItem : public MenuComponent{

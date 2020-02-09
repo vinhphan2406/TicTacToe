@@ -7,8 +7,8 @@
 
 #include <vector>
 
-#define BOARD_DIM_1 2
-#define BOARD_DIM_2 2
+#define BOARD_DIM_1 8
+#define BOARD_DIM_2 8
 
 #define WIN_CONDITION 5
 
@@ -42,7 +42,7 @@
 class ICore {
     public:
         virtual ~ICore() = default;
-        virtual bool makeMove(Position) = 0;
+        virtual ICommand::Result makeMove(Position) = 0;
         virtual bool printBoard() = 0;
         virtual bool checkWin() = 0;
         virtual bool checkDraw() = 0;
@@ -71,7 +71,7 @@ class TicTacToe : public ICore {
         bool nextTurn();
         bool printBoard() override;
         Player* getSelectedPlayer() override;
-        bool makeMove(Position) override;
+        ICommand::Result makeMove(Position) override;
         int getNumOfTurns() const override;
 };
 
@@ -81,37 +81,29 @@ class MakeMoveCommand : public ICommand{
         Position pos;
     public:
         MakeMoveCommand(ICore*, Position _pos = Position());
-        // Reset position
-        // INPUT:
-        //  _pos: new position
-        // OUTPUT:
-        //  true: success
-        //  false: position out of range or already occupied
-
-        // bool SetPosition(Position _pos);
-
+        ~MakeMoveCommand(){}
         // Make move on the board
         // OUTPUT:
         //  0: success
         //  1: position already taken
-        int execute() override;
+        Result execute() override;
 };
 
-class CheckWinCommand : public ICommand {
-    private:
-        ICore* core;
-    public:
-        CheckWinCommand(ICore*);
-        int execute() override;
-};
+// class CheckWinCommand : public ICommand {
+//     private:
+//         ICore* core;
+//     public:
+//         CheckWinCommand(ICore*);
+//         Result execute() override;
+// };
 
-class CheckDrawCommand : public ICommand {
-    private:
-        ICore* core;
-    public:
-        CheckDrawCommand(ICore*);
-        int execute() override;
-};
+// class CheckDrawCommand : public ICommand {
+//     private:
+//         ICore* core;
+//     public:
+//         CheckDrawCommand(ICore*);
+//         Result execute() override;
+// };
 
 class DisplayBoard : public IDisplay {
     private:
@@ -187,9 +179,10 @@ class Game : public IGame{
         IDisplay* display;
         IInput* input;
         IDisplay* error_message;
+        IDisplay* end_message;
         // std::queue<ICommand*> events;
     public:
-        Game(): core(NULL), display(NULL), input(NULL), error_message(NULL){}
+        Game(): core(NULL), display(NULL), input(NULL), error_message(NULL), end_message(NULL){}
         ~Game(){
             clean();
         }
@@ -207,7 +200,7 @@ class RunGameCommand : public ICommand {
     public:
         RunGameCommand();
         ~RunGameCommand();
-        int execute() override;
+        Result execute() override;
 };
 
 #ifndef START_GAME_MENU_H

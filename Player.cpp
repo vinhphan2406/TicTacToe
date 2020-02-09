@@ -7,20 +7,15 @@ bool Player::storeCommand(ICommand* _command){
     return true;
 }
 
-int Player::executeCommand(){
+ICommand::Result Player::executeCommand(){
     if (!this->commands.empty()){
-        int output_code = 0;
+        ICommand::Result output_code = ICommand::Result::SUCCESS;
         if (this->commands.front() != NULL) {
-            try {
-                output_code = this->commands.front()->execute();
-            }
-            catch (std::exception& e){
-                std::cout << e.what() << std::endl;
-                this->commands.pop();
-            }
+            output_code = this->commands.front()->execute();
+            delete this->commands.front();
             this->commands.pop();
         }
         return output_code;
     }
-    return -1;
+    return ICommand::Result::NO_COMMAND;
 }

@@ -99,15 +99,15 @@ bool TicTacToe::checkWin(){
     return checkWin(this->nextMove, -1);
 }
 
-CheckWinCommand::CheckWinCommand(ICore* _core){
-    if (this->core == NULL) throw std::bad_alloc();
-    this->core = _core;
-}
+// CheckWinCommand::CheckWinCommand(ICore* _core){
+//     if (this->core == NULL) throw std::bad_alloc();
+//     this->core = _core;
+// }
 
-int CheckWinCommand::execute(){
-    if (this->core->checkWin()) return 0;
-    return 1;
-}
+// ICommand::Result CheckWinCommand::execute(){
+//     if (this->core->checkWin()) return 0;
+//     return 1;
+// }
 
 bool TicTacToe::checkDraw(){
     for (int i = 0; i < this->board->getNumOfRow(); i++){
@@ -118,15 +118,15 @@ bool TicTacToe::checkDraw(){
     return true;
 }
 
-CheckDrawCommand::CheckDrawCommand(ICore* _core){
-    if (this->core == NULL) throw std::bad_alloc();
-    this->core = _core;
-}
+// CheckDrawCommand::CheckDrawCommand(ICore* _core){
+//     if (this->core == NULL) throw std::bad_alloc();
+//     this->core = _core;
+// }
 
-int CheckDrawCommand::execute(){
-    if (this->core->checkDraw()) return 0;
-    return 1;
-}
+// ICommand::Result CheckDrawCommand::execute(){
+//     if (this->core->checkDraw()) return 0;
+//     return 1;
+// }
 
 
 bool TicTacToe::nextTurn(){
@@ -170,16 +170,18 @@ int DisplayBoard::print(){
     return 1;
 }
 
-bool TicTacToe::makeMove(Position _pos){
-    if (_pos.col >= board->getNumOfCol() || _pos.row >= board->getNumOfRow())
-        throw std::out_of_range("Position out of range!");
-    if (_pos.col < 0 || _pos.row < 0)
-        throw std::invalid_argument("Position not specified");
+ICommand::Result TicTacToe::makeMove(Position _pos){
+    if (_pos.col >= board->getNumOfCol() || _pos.col < 0 
+    || _pos.row >= board->getNumOfRow() || _pos.row < 0)
+        return ICommand::Result::OUT_OF_RANGE;
+
     if (this->board->getSquare(_pos).checkOccupied() == true)
-        return false; 
+        return ICommand::Result::OCCUPIED; 
+
     this->board->getSquare(_pos).setPiece(Piece(this->selectedPlayer->getColor()));
     this->nextMove = _pos;
-    return true;
+
+    return ICommand::Result::SUCCESS;
 }
 
 MakeMoveCommand::MakeMoveCommand(ICore* _core, Position _pos){
@@ -188,9 +190,8 @@ MakeMoveCommand::MakeMoveCommand(ICore* _core, Position _pos){
     this->pos = _pos;
 }
 
-int MakeMoveCommand::execute(){
-    if (this->core->makeMove(this->pos)) return 0;
-    return 1;
+ICommand::Result MakeMoveCommand::execute(){
+    return this->core->makeMove(this->pos);
 }
 
 DisplayMessage::DisplayMessage(ICore* _core, std::string _message){
@@ -207,11 +208,13 @@ int DisplayMessage::print(){
 void Game::init(){
     this->core = new TicTacToe();
     this->display = new DisplayBoard(this->core);
-    this->input = new InputPosition("Input next position: ");
+    this->input = new InputPosition("Input next position: ", "Invalid input! Please re-enter: ");
     this->error_message = NULL;
+    this->end_message = NULL;
 }
 
 bool Game::handleEvent(){
+    // Skip first turn
     if (this->core->getNumOfTurns() == 0) return true;
     std::cout << "Player " << this->core->getSelectedPlayer()->getID() << " turn. ";
     Position nextMove;
@@ -229,53 +232,69 @@ bool Game::handleEvent(){
 }
 
 bool Game::update(){
+    // Skip first turn
     if (this->core->getNumOfTurns() == 0){
         this->core->nextTurn();
         return true;
     }
+
+    std::stringstream error_stream;
+    std::stringstream end_stream;
     try {
-        if (this->core->getSelectedPlayer()->executeCommand() == 0){
-            this->core->switchPlayer();
-            this->core->nextTurn();
-            return true;
-        }
-        else {
-            std::stringstream error_stream;
-            error_stream << "Illegal move!";
-            this->error_message = new DisplayMessage(this->core, error_stream.str());
-            return false;
+        ICommand::Result result = this->core->getSelectedPlayer()->executeCommand();
+        switch (result){
+            case ICommand::Result::SUCCESS:
+                if (this->core->checkWin()){
+                    end_stream << "Player " << this->core->getSelectedPlayer()->getID() << " wins.";
+                    this->core->isRunning = false;
+                }
+                else if (this->core->checkDraw()){
+                    end_stream << "Game draws.";
+                    this->core->isRunning = false;
+                }
+                this->core->switchPlayer();
+                this->core->nextTurn();
+                break;
+            case ICommand::Result::OUT_OF_RANGE:
+                error_stream << "Position: Out of range!";
+                break;
+            case ICommand::Result::OCCUPIED:
+                error_stream << "Illegal move!";
+                break;
+            default:
+                break;
         }
     }
     catch (std::exception& e){
-        std::stringstream error_stream;
-        error_stream << e.what();
-        this->error_message = new DisplayMessage(this->core, error_stream.str());
+        std::cout << "Exception occurred!\n" << e.what() << std::endl;
+        this->core->isRunning = false;
         return false;
     }
-    
+    // Load error message if stream not empty
+    if (error_stream.rdbuf()->in_avail() != 0) this->error_message = new DisplayMessage(this->core, error_stream.str());
+    // Load end message if stream not empty
+    if (end_stream.rdbuf()->in_avail() != 0) this->end_message = new DisplayMessage(this->core, end_stream.str());
+    return true;
 }
 
 bool Game::render(){
     if (this->display != NULL){
         this->display->print();
     }
+    // Print error message if available
     if (this->error_message != NULL){
         this->error_message->print();
         delete this->error_message;
         this->error_message = NULL;
         return false;
     }
-    if (this->core->checkWin()){
-        std::cout << "Player " << this->core->getSelectedPlayer()->getID() << " wins." << std::endl;
-        this->core->isRunning = false;
-        return true;
+    // Print end message if available
+    if (this->end_message != NULL){
+        this->end_message->print();
+        delete this->end_message;
+        this->end_message = NULL;
     }
-    if (this->core->checkDraw()){
-        std::cout << "Game draws." << std::endl;
-        this->core->isRunning = false;
-        return true;
-    }
-    return false;
+    return true;
 }
 
 bool Game::clean(){
@@ -301,7 +320,7 @@ RunGameCommand::~RunGameCommand(){
     this->game = NULL;
 }
 
-int RunGameCommand::execute(){
+ICommand::Result RunGameCommand::execute(){
     this->game->init();
     while (!game->isExiting()){
         this->game->handleEvent();
@@ -309,7 +328,7 @@ int RunGameCommand::execute(){
         this->game->render();
     }
     this->game->clean();
-    return 0;
+    return Result::SUCCESS;
 }
 
 // StartGameMenu::StartGameMenu(std::string _title, std::string _desc){

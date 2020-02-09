@@ -11,8 +11,9 @@ class IInput {
 class InputPosition : public IInput {
     private:
         std::string message;
+        std::string error_message;
     public:
-        InputPosition(std::string _message = "Input position: ");
+        InputPosition(std::string _message = "Input position: ", std::string _error_msg = "");
         Position input() override;
 };
 
