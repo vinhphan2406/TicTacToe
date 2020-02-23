@@ -1,98 +1,3 @@
-// #ifndef TEMPLATE_TREE
-// #define TEMPLATE_TREE
-
-// #include <vector>
-
-// template<class T>
-// struct Node{
-//     T* data;
-//     Node<T> *parent;
-//     std::vector<Node<T>*> child;
-//     Node(): data(NULL), parent(NULL){}
-//     Node(T* _data): data(_data), parent(NULL){}
-// };
-
-// template<class T>
-// class Tree{
-//     private:
-//         Node<T> *pHead;
-//         Node<T> *currentNode;
-//     protected:
-//         Node<T> *insertNode(Node<T>* _node, T* _data);
-//         Node<T> *removeNode(Node<T>* _node);
-//     public:
-//         Tree(): pHead(NULL), currentNode(NULL){}
-//         ~Tree(){
-//             this->pHead = removeNode(this->pHead);
-//         }
-//         bool insertNode(T* _data){
-//             if (currentNode == NULL) return false;
-//             this->currentNode = insertNode(this->currentNode, _data);
-//         }
-//         bool removeNode(){
-//             if (this->currentNode == NULL) return false;
-//             Node<T>* tempNode = this->currentNode;
-//             this->currentNode = this->currentNode->parent;
-//             for (typename std::vector<Node<T>*>::iterator it = this->currentNode->child.begin(); it != this->currentNode->child.end(); it++){
-//                 if (*it == tempNode){
-//                     this->currentNode->child.erase(it);
-//                     break;
-//                 }
-//             }
-//             this->currentNode = removeNode(this->currentNode);
-//             return true;
-//         }
-//         bool moveUp(){
-//             if (this->currentNode == NULL) return false;
-//             this->currentNode = this->currentNode->parent;
-//             return true;
-//         }
-//         bool moveDown(int _idx){
-//             if (this->currentNode == NULL){
-//                 this->currentNode = this->pHead;
-//                 return this->pHead != NULL;
-//             }
-//             if (this->currentNode->child.empty() == true) return false;
-//             this->currentNode = this->currentNode->child[_idx];
-//             return true;
-//         }
-//         T* getData(){
-//             return this->currentNode->data;
-//         }
-// };
-
-// template<class T>
-// // Insert node to tree from starting node as child
-// // INPUT:
-// // OUTPUT:
-// //  modified _node
-// Node<T>* Tree<T>::insertNode(Node<T>* _root, T* _data){
-//     if (_root == NULL) _root = new Node<T>(_data);
-//     if (_data != NULL) _root->child.push_back(new Node<T>(_data));
-//     return _root;
-// }
-
-
-// template<class T>
-// // Recursively delete nodes from tree from starting node
-// // INPUT:
-// //  _node: starting node
-// // OUTPUT:
-// //  modified _node
-// Node<T>* Tree<T>::removeNode(Node<T>* _root){
-//     if (_root == NULL) return _root;
-//     for (typename std::vector<Node<T>*>::iterator it = _root->child.begin(); it != _root->child.end(); it++){
-//         *it = removeNode(*it);
-//         delete *it;
-//         *it = NULL;
-//     }
-//     _root = removeNode(_root);
-//     delete _root;
-//     _root = NULL;
-//     return _root;
-// }
-// #endif
-
 #ifndef TEMP_TREE_H
 #define TEMP_TREE_H
 
@@ -100,7 +5,7 @@
 #include <stdexcept>
 
 template <class T>
-struct Node{
+struct Node {
     T* data;
     Node<T>* parent;
     std::vector<Node<T>*> child;
@@ -111,7 +16,7 @@ struct Node{
 };
 
 template <class T>
-class Tree{
+class Tree {
     private:
         Node<T>* pHead;
         Node<T>* currentNode;
@@ -223,15 +128,15 @@ class Tree{
 
 #endif
 
-#ifndef MENU_H
-#define MENU_H
+#ifndef MENU_COMPONENT_H
+#define MENU_COMPONENT_H
 
 #include <string>
 #include <queue>
 
 #include "Command.h"
 
-class MenuComponent{
+class MenuComponent {
     protected:
         std::string title;
         std::string desc;
@@ -269,13 +174,21 @@ class MenuComponent{
         bool removeLastAction();
 
 };
+
+#endif
+
+#ifndef MENU_COMMAND_H
+#define MENU_COMMAND_H
+
 // Interact with selected menu item (either execute a command or access another submenu)
-class ChooseOptionCommand : public ICommand{
+class ChooseOptionCommand : public ICommand {
     private:
         Tree<MenuComponent>* menu;
         int option;
+        int startNum;
     public:
-        ChooseOptionCommand(Tree<MenuComponent>* _menu, int _option) : menu(_menu), option(_option){}
+        ChooseOptionCommand(Tree<MenuComponent>* _menu, int _option, int _startNum = 1): 
+        menu(_menu), option(_option), startNum(_startNum){}
         // Interact with selected menu item (either execute a command or access another submenu)
         // OUTPUT:
         //  - 0: success
@@ -284,7 +197,7 @@ class ChooseOptionCommand : public ICommand{
         Result execute() override;
 };
 
-class ReturnPreviousMenu : public ICommand{
+class ReturnPreviousMenu : public ICommand {
     private:
         Tree<MenuComponent>* menu;
     public:
@@ -296,23 +209,26 @@ class ReturnPreviousMenu : public ICommand{
         Result execute() override;
 };
 
-// class MenuItem : public MenuComponent{
-//     public:
-//         MenuItem(std::string _title, std::string _desc){
-//             this->title = _title;
-//             this->desc = _desc;
-//             this->commands.push_back(new );
-//         }
-// };
-
-// class Menu : public MenuComponent{
-//     public:
-//         Menu(std::string _title, std::string _desc){
-//             this->title = _title;
-//             this->desc = _desc;
-//             this->commands.push_back(new );
-//         }
-// };
 #endif
 
 
+#ifndef DISPLAY_MENU_H
+#define DISPLAY_MENU_H
+
+#include "Display.h"
+
+class DisplayMenu : public IDisplay {
+    private:
+        Tree<MenuComponent>* menu;
+        bool printDesc;
+        bool printIdx;
+    public:
+        DisplayMenu(Tree<MenuComponent>* _menu, bool _desc = false, bool _idx = true): 
+        menu(_menu), printDesc(_desc), printIdx(_idx){}
+        // Print current submenu
+        // OUTPUT:
+        //  - 0: success
+        int print() override;
+};
+
+#endif

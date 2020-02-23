@@ -24,9 +24,8 @@ ICommand::Result MenuComponent::doAction(){
 ICommand::Result ChooseOptionCommand::execute(){
     if (this->menu->hasChild()){
         try {
-            this->menu->moveDown(this->option);
-            if (this->menu->hasChild() == false) this->menu->moveUp();
-            this->menu->getChildData(this->option)->doAction();
+            this->menu->moveDown(this->option - this->startNum);
+            this->menu->getCurrentData()->doAction();
         }
         catch (std::invalid_argument& e){
             std::cout << e.what() << std::endl;
@@ -60,3 +59,18 @@ ICommand::Result ReturnPreviousMenu::execute(){
     return Result::SUCCESS;
 }
 
+int DisplayMenu::print(){
+    if (this->menu == NULL) return 1;
+    if (this->menu->hasChild()){
+        std::cout << this->menu->getCurrentData()->getTitle() << std::endl;
+        if (this->printDesc == true) std::cout << this->menu->getCurrentData()->getDescription() << std::endl;
+        int counter = 1;
+        for (int i = 0; i < this->menu->getChildSize(); i++){
+            if (this->menu->getChildData(i)->getHiddenState() == false){
+                if (this->printIdx) std::cout << counter++ << ". ";
+                std::cout << this->menu->getChildData(i)->getTitle() << std::endl;
+            }
+        }
+    }
+    return 0;
+}

@@ -3,9 +3,6 @@
 #ifndef I_DISPLAY_H
 #define I_DISPLAY_H
 
-#include "GameObj.h"
-#include "Menu.h"
-
 class IDisplay{
     private:
     public:
@@ -17,17 +14,4 @@ class IDisplay{
         virtual int print() = 0;
 };
 
-class DisplayMenu : public IDisplay{
-    private:
-        Tree<MenuComponent>* menu;
-        bool printDesc;
-        bool printIdx;
-    public:
-        DisplayMenu(Tree<MenuComponent>* _menu, bool _desc = false, bool _idx = true): 
-        menu(_menu), printDesc(_desc), printIdx(_idx){}
-        // Print current submenu
-        // OUTPUT:
-        //  - 0: success
-        int print() override;
-};
 #endif

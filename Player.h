@@ -19,7 +19,9 @@ class Player {
             this->id = this->initCount;
             this->color = _color;
         }
-        ~Player(){}
+        ~Player(){
+            this->initCount--;
+        }
         bool operator==(const Player& _player) const {
             return this->id == _player.id;
         }

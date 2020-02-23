@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <exception>
-
+#include <functional>
 
 
 enum class Color {
@@ -91,7 +91,7 @@ class Square {
         ~Square(){
             this->removePiece();
         }
-        Piece* getPiece(){
+        Piece* getPiece() const {
             return this->piece;
         }
         // Set piece on square
@@ -172,6 +172,21 @@ class Board {
         }
         Square& operator[](Position _pos){
             this->getSquare(_pos);
+        }
+        template <class T>
+        void traverse(std::function<void(Square&, T&)> f, T& pParam){
+            for (int i = 0; i < this->numOfCol; i++){
+                for (int j = 0; j < this->numOfRow; j++){
+                    f(this->square[i][j], pParam);
+                }
+            }
+        }
+        void traverse(std::function<void(Square&)> f){
+            for (int i = 0; i < this->numOfCol; i++){
+                for (int j = 0; j < this->numOfRow; j++){
+                    f(this->square[i][j]);
+                }
+            }
         }
 };
 #endif

@@ -2,23 +2,22 @@
 
 #include <sstream>
 
-TicTacToe::TicTacToe(){
+TicTacToeCore::TicTacToeCore(){
     this->board = new Board(BOARD_DIM_1, BOARD_DIM_2);
     this->player1 = new Player(Color::white);
     this->player2 = new Player(Color::black);
-    this->selectedPlayer = this->player1;
+    this->selectedPlayer = this->player2;
     this->numOfTurns = 0;
-    this->isRunning = true;
     this->nextMove = Position();
 }
 
-TicTacToe::~TicTacToe(){
+TicTacToeCore::~TicTacToeCore(){
     if (this->board != NULL) delete this->board;
     if (this->player1 != NULL) delete this->player1;
     if (this->player2 != NULL) delete this->player2;
 }
 
-bool TicTacToe::switchPlayer(){
+bool TicTacToeCore::switchPlayer(){
     if (selectedPlayer != NULL){
         if (this->selectedPlayer == player2) this->selectedPlayer = player1;
         else this->selectedPlayer = player2;
@@ -28,7 +27,7 @@ bool TicTacToe::switchPlayer(){
 }
 
 
-bool TicTacToe::checkWin(Position _pos, int _mode){
+bool TicTacToeCore::checkWin(Position _pos, int _mode){
     if (this->board == NULL) throw std::invalid_argument("Board not initialized!");
     if (_pos == Position()) return false;
     // if (this->listOfPlayers.size() != 2) throw std::invalid_argument("Player number invalid!");
@@ -95,54 +94,33 @@ bool TicTacToe::checkWin(Position _pos, int _mode){
     return false;
 }
 
-bool TicTacToe::checkWin(){
+bool TicTacToeCore::checkWin(){
     return checkWin(this->nextMove, -1);
 }
 
-// CheckWinCommand::CheckWinCommand(ICore* _core){
-//     if (this->core == NULL) throw std::bad_alloc();
-//     this->core = _core;
-// }
-
-// ICommand::Result CheckWinCommand::execute(){
-//     if (this->core->checkWin()) return 0;
-//     return 1;
-// }
-
-bool TicTacToe::checkDraw(){
-    for (int i = 0; i < this->board->getNumOfRow(); i++){
-        for (int j = 0; j < this->board->getNumOfCol(); j++){
-            if (this->board->getSquare(Position(i,j)).checkOccupied() == false) return false;
-        }
-    }
-    return true;
+bool TicTacToeCore::checkDraw(){
+    bool isDraw = true;
+    this->board->traverse<bool>([](Square& _square, bool& _result){
+        if (_square.checkOccupied() == false) _result = false;
+    }, isDraw);
+    return isDraw;
 }
 
-// CheckDrawCommand::CheckDrawCommand(ICore* _core){
-//     if (this->core == NULL) throw std::bad_alloc();
-//     this->core = _core;
-// }
 
-// ICommand::Result CheckDrawCommand::execute(){
-//     if (this->core->checkDraw()) return 0;
-//     return 1;
-// }
-
-
-bool TicTacToe::nextTurn(){
+bool TicTacToeCore::nextTurn(){
     this->numOfTurns++;
     return true;
 }
 
-int TicTacToe::getNumOfTurns() const{
+int TicTacToeCore::getNumOfTurns() const{
     return this->numOfTurns;
 }
 
-Player* TicTacToe::getSelectedPlayer(){
+Player* TicTacToeCore::getSelectedPlayer() const {
     return this->selectedPlayer;
 }
 
-bool TicTacToe::printBoard(){
+bool TicTacToeCore::printBoard(){
     for (int i = 0; i < this->board->getNumOfRow(); i++){
         for (int j = 0; j < this->board->getNumOfCol(); j++){
             Piece* piece = this->board->getSquare(Position(i,j)).getPiece();
@@ -170,7 +148,7 @@ int DisplayBoard::print(){
     return 1;
 }
 
-ICommand::Result TicTacToe::makeMove(Position _pos){
+ICommand::Result TicTacToeCore::makeMove(Position _pos){
     if (_pos.col >= board->getNumOfCol() || _pos.col < 0 
     || _pos.row >= board->getNumOfRow() || _pos.row < 0)
         return ICommand::Result::OUT_OF_RANGE;
@@ -184,6 +162,318 @@ ICommand::Result TicTacToe::makeMove(Position _pos){
     return ICommand::Result::SUCCESS;
 }
 
+
+DisplayMessage::DisplayMessage(std::string _message){
+    this->message = _message;
+}
+
+int DisplayMessage::print(){
+    std::cout << this->message << std::endl;
+    return 0;
+}
+
+bool IGame::isExiting() const {
+    return this->exit_state;
+}
+
+GameState IGame::getNextState() const {
+    return this->next_state;
+}
+
+// -------------------
+// IN GAME
+// -------------------
+
+void InGame::init(){
+    this->core = new TicTacToeCore();
+    this->main_display.push_back(new DisplayBoard(this->core));
+    
+    this->input = new InputPosition();
+    this->exit_state = false;
+    this->next_state = GameState::IN_GAME;
+}
+
+bool InGame::handleEvent(){
+    // Skip first turn
+    if (this->core->getNumOfTurns() == 0) {
+        this->core->getSelectedPlayer()->storeCommand(new IdleCommand());
+        return true;
+    }
+    // Input next move
+    this->core->getSelectedPlayer()->storeCommand(new MakeMoveCommand(this->core, this->input->input().getObjectValue<Position>()));
+    return true;
+}
+
+bool InGame::update(){
+    try {
+        // Execute command from selected player's perspective
+        ICommand::Result result = this->core->getSelectedPlayer()->executeCommand();
+        switch (result){
+            case ICommand::Result::SUCCESS:
+                if (this->core->checkWin()){
+                    std::stringstream end_stream;
+                    end_stream << "Player " << this->core->getSelectedPlayer()->getID() << " wins.";
+                    this->message.push_back(new DisplayMessage(end_stream.str()));
+                    this->exit_state = true;
+                }
+                else if (this->core->checkDraw()){
+                    this->message.push_back(new DisplayMessage("Game draws."));
+                    this->exit_state = true;
+                }
+                else {
+                    this->core->switchPlayer();
+                    this->core->nextTurn();
+                    std::stringstream input_stream;
+                    input_stream << "Player " << this->core->getSelectedPlayer()->getID() << " turns. Input position: ";
+                    this->message.push_back(new DisplayMessage(input_stream.str()));
+                }
+                break;
+            case ICommand::Result::OUT_OF_RANGE:
+                this->message.push_back(new DisplayMessage("Position out of range! Re-input position: "));
+                break;
+            case ICommand::Result::OCCUPIED:
+                this->message.push_back(new DisplayMessage("Illegal move! Re-input position: "));
+                break;
+            case ICommand::Result::NO_COMMAND:
+                this->message.push_back(new DisplayMessage("No input command! Re-input position: "));
+                break;
+            default:
+                break;
+        }
+    }
+    catch (std::exception& e){
+        std::stringstream exception_stream;
+        exception_stream << "Exception occurred!\n" << e.what();
+        this->message.push_back(new DisplayMessage(exception_stream.str()));
+        this->exit_state = false;
+        return false;
+    }
+    if (this->isExiting()){
+        std::stringstream stats_stream;
+        stats_stream << "Number of moves: " << this->core->getNumOfTurns();
+        this->message.push_back(new DisplayMessage(stats_stream.str()));
+        this->next_state = GameState::END_MENU;
+    }
+}
+
+bool InGame::render(){
+    // Print game elements
+    for (std::vector<IDisplay*>::iterator it = this->main_display.begin(); it != this->main_display.end(); it++){
+        (*it)->print();
+    }
+
+    // Print message if available (clear after print)
+    for (std::vector<IDisplay*>::iterator it = this->message.begin(); it != this->message.end(); it++){
+        (*it)->print();
+        delete *it;
+    }
+    this->message.clear();
+
+    return true;
+}
+
+bool InGame::clean(){
+    if (this->core != NULL) delete this->core;
+    if (this->input != NULL) delete this->input;
+    this->core = NULL;
+    this->input = NULL;
+
+    // Release any game element initialized
+    for (std::vector<IDisplay*>::iterator it = this->main_display.begin(); it != this->main_display.end(); it++){
+        delete (*it);
+    }
+    this->main_display.clear();
+
+    return true;
+}
+
+// -------------------
+// START GAME MENU
+// -------------------
+
+void StartGameMenu::init(){
+    this->menu = new Tree<MenuComponent>;
+    std::unordered_map<std::string, int> menu_iter = {
+        {"Start", 0},
+        {"Exit", 1}
+    };
+    this->menu->insertNode(new MenuComponent("TicTacToe", "Current version: 0.2\n Made by lolipop"));
+
+    this->menu->insertNode(new MenuComponent("Start"));
+    this->menu->getChildData(menu_iter["Start"])->loadNextAction(new NextStateCommand(this, GameState::IN_GAME));
+    this->menu->getChildData(menu_iter["Start"])->loadNextAction(new ExitStateCommand(this));
+
+    this->menu->insertNode(new MenuComponent("Exit"));
+    this->menu->getChildData(menu_iter["Exit"])->loadNextAction(new NextStateCommand(this, GameState::EXIT_GAME));
+    this->menu->getChildData(menu_iter["Exit"])->loadNextAction(new ExitStateCommand(this));
+
+    this->user = new Player();
+
+    this->exit_state = false;
+    this->next_state = GameState::START_MENU;
+    this->start = false;
+
+    this->main_display.push_back(new DisplayMenu(this->menu));
+
+    this->input = new InputInt();
+}
+
+bool StartGameMenu::handleEvent(){
+    if (!this->start){
+        this->user->storeCommand(new IdleCommand());
+        this->start = true;
+        return true;
+    }
+    this->user->storeCommand(new ChooseOptionCommand(this->menu, this->input->input().getObjectValue<int>()));
+    return true;
+}
+
+bool StartGameMenu::update(){
+    ICommand::Result result = this->user->executeCommand();
+    switch (result){
+        case ICommand::Result::SUCCESS:
+            if (!this->isExiting()){
+                this->message.push_back(new DisplayMessage("Choose option: "));
+            }
+            break;
+        default:
+            this->message.push_back(new DisplayMessage("Invalid input! Re-choose option: "));
+            break;
+    }
+    return true;
+}
+
+bool StartGameMenu::render(){
+    // Print main elements (menu)
+    for (std::vector<IDisplay*>::iterator it = this->main_display.begin(); it != this->main_display.end(); it++){
+        (*it)->print();
+    }
+
+    // Print message if available
+    for (std::vector<IDisplay*>::iterator it = this->message.begin(); it != this->message.end(); it++){
+        (*it)->print();
+        delete *it;
+    }
+    this->message.clear();
+
+}
+
+bool StartGameMenu::clean(){
+    delete this->menu;
+    delete this->input;
+    delete this->user;
+
+    // Release any menu element initialized
+    for (std::vector<IDisplay*>::iterator it = this->main_display.begin(); it != this->main_display.end(); it++){
+        delete (*it);
+    }
+    this->main_display.clear();
+
+    // Release any menu message initialized
+    for (std::vector<IDisplay*>::iterator it = this->message.begin(); it != this->message.end(); it++){
+        delete (*it);
+    }
+    this->message.clear();
+    return true;
+}
+
+// -------------------
+// END GAME MENU
+// -------------------
+
+void EndGameMenu::init(){
+    this->menu = new Tree<MenuComponent>;
+    std::unordered_map<std::string, int> menu_iter = {
+        {"Play again", 0},
+        {"Go to main menu", 1}
+    };
+    this->menu->insertNode(new MenuComponent("Game ended."));
+
+    this->menu->insertNode(new MenuComponent("Play again"));
+    this->menu->getChildData(menu_iter["Play again"])->loadNextAction(new NextStateCommand(this, GameState::IN_GAME));
+    this->menu->getChildData(menu_iter["Play again"])->loadNextAction(new ExitStateCommand(this));
+
+    this->menu->insertNode(new MenuComponent("Go to main menu"));
+    this->menu->getChildData(menu_iter["Go to main menu"])->loadNextAction(new NextStateCommand(this, GameState::START_MENU));
+    this->menu->getChildData(menu_iter["Go to main menu"])->loadNextAction(new ExitStateCommand(this));
+
+    this->user = new Player();
+
+    this->exit_state = false;
+    this->next_state = GameState::END_MENU;
+    this->start = false;
+
+    this->main_display.push_back(new DisplayMenu(this->menu));
+
+    this->input = new InputInt();
+}
+
+bool EndGameMenu::handleEvent(){
+    if (!this->start){
+        this->user->storeCommand(new IdleCommand());
+        this->start = true;
+        return true;
+    }
+    this->user->storeCommand(new ChooseOptionCommand(this->menu, this->input->input().getObjectValue<int>()));
+    return true;
+}
+
+bool EndGameMenu::update(){
+    ICommand::Result result = this->user->executeCommand();
+    switch(result){
+        case ICommand::Result::SUCCESS:
+            if (!this->isExiting()){
+                this->message.push_back(new DisplayMessage("Choose option: "));
+            }
+            break;
+        default:
+            this->message.push_back(new DisplayMessage("Invalid input! Re-choose option: "));
+            break;
+    }
+    return true;
+}
+
+bool EndGameMenu::render(){
+    // Print main elements (menu)
+    for (std::vector<IDisplay*>::iterator it = this->main_display.begin(); it != this->main_display.end(); it++){
+        (*it)->print();
+    }
+
+    // Print message if available
+    for (std::vector<IDisplay*>::iterator it = this->message.begin(); it != this->message.end(); it++){
+        (*it)->print();
+        delete *it;
+    }
+    this->message.clear();
+    
+    return true;
+}
+
+bool EndGameMenu::clean(){
+    delete this->menu;
+    delete this->input;
+    delete this->user;
+    // Release any game element initialized
+    for (std::vector<IDisplay*>::iterator it = this->main_display.begin(); it != this->main_display.end(); it++){
+        delete (*it);
+    }
+    this->main_display.clear();
+    return true;
+}
+// -------------------
+// GAME COMMAND
+// -------------------
+
+ICommand::Result NextStateCommand::execute(){
+    this->component->next_state = this->newState;
+    return Result::SUCCESS;
+}
+
+ICommand::Result ExitStateCommand::execute(){
+    this->component->exit_state = true;
+    return Result::SUCCESS;
+}
+
 MakeMoveCommand::MakeMoveCommand(ICore* _core, Position _pos){
     if (_core == NULL) throw std::bad_alloc();
     this->core = _core;
@@ -194,146 +484,54 @@ ICommand::Result MakeMoveCommand::execute(){
     return this->core->makeMove(this->pos);
 }
 
-DisplayMessage::DisplayMessage(ICore* _core, std::string _message){
-    if (_core == NULL) throw std::bad_alloc();
-    this->core = _core;
-    this->message = _message;
-}
+// -------------------
+// GAME INPUT
+// -------------------
 
-int DisplayMessage::print(){
-    std::cout << this->message << std::endl;
-    return 0;
-}
-
-void Game::init(){
-    this->core = new TicTacToe();
-    this->display = new DisplayBoard(this->core);
-    this->input = new InputPosition("Input next position: ", "Invalid input! Please re-enter: ");
-    this->error_message = NULL;
-    this->end_message = NULL;
-}
-
-bool Game::handleEvent(){
-    // Skip first turn
-    if (this->core->getNumOfTurns() == 0) return true;
-    std::cout << "Player " << this->core->getSelectedPlayer()->getID() << " turn. ";
-    Position nextMove;
-    while (true){
-        nextMove = this->input->input();
-        if (!(nextMove == Position())) break;
+Object InputPosition::input(){
+    int x, y;
+    while (!(std::cin >> x >> y)){
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << this->error_message;
     }
-    this->core->getSelectedPlayer()->storeCommand(new MakeMoveCommand(this->core, nextMove));
-    // std::stringstream output_stream;
-    // output_stream << "Player " << this->core->getSelectedPlayer()->getID() << " wins." << std::endl;
-    // this->events.push(new DisplayMessage(this->core, output_stream.str()));
-
-    // this->events.push(new CheckDrawCommand(this->core));
-    return true;
+    return Object(Position(x - startNum, y - startNum));
 }
 
-bool Game::update(){
-    // Skip first turn
-    if (this->core->getNumOfTurns() == 0){
-        this->core->nextTurn();
-        return true;
+Object InputInt::input(){
+    int x;
+    while (!(std::cin >> x)){
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << this->error_message;
     }
+    return Object(x);
+}
+// -------------------
+// GAME FRAMEWORK
+// -------------------
 
-    std::stringstream error_stream;
-    std::stringstream end_stream;
-    try {
-        ICommand::Result result = this->core->getSelectedPlayer()->executeCommand();
-        switch (result){
-            case ICommand::Result::SUCCESS:
-                if (this->core->checkWin()){
-                    end_stream << "Player " << this->core->getSelectedPlayer()->getID() << " wins.";
-                    this->core->isRunning = false;
+bool GameFramework::run(){
+    IGame* top_state = this->current_states.top();
+
+    while (this->currentState_flag != GameState::EXIT_GAME){
+        top_state->init();
+        while (!top_state->isExiting()){
+            top_state->handleEvent();
+            top_state->update();
+            top_state->render();
+            if (top_state->getNextState() != this->currentState_flag){
+                this->currentState_flag = top_state->getNextState();
+                if (top_state->isExiting()){
+                    top_state->clean();
+                    this->current_states.pop();
                 }
-                else if (this->core->checkDraw()){
-                    end_stream << "Game draws.";
-                    this->core->isRunning = false;
-                }
-                this->core->switchPlayer();
-                this->core->nextTurn();
+                this->current_states.push(this->states[this->currentState_flag]);
+                top_state = this->current_states.top();
                 break;
-            case ICommand::Result::OUT_OF_RANGE:
-                error_stream << "Position: Out of range!";
-                break;
-            case ICommand::Result::OCCUPIED:
-                error_stream << "Illegal move!";
-                break;
-            default:
-                break;
+            }
         }
     }
-    catch (std::exception& e){
-        std::cout << "Exception occurred!\n" << e.what() << std::endl;
-        this->core->isRunning = false;
-        return false;
-    }
-    // Load error message if stream not empty
-    if (error_stream.rdbuf()->in_avail() != 0) this->error_message = new DisplayMessage(this->core, error_stream.str());
-    // Load end message if stream not empty
-    if (end_stream.rdbuf()->in_avail() != 0) this->end_message = new DisplayMessage(this->core, end_stream.str());
+
     return true;
 }
-
-bool Game::render(){
-    if (this->display != NULL){
-        this->display->print();
-    }
-    // Print error message if available
-    if (this->error_message != NULL){
-        this->error_message->print();
-        delete this->error_message;
-        this->error_message = NULL;
-        return false;
-    }
-    // Print end message if available
-    if (this->end_message != NULL){
-        this->end_message->print();
-        delete this->end_message;
-        this->end_message = NULL;
-    }
-    return true;
-}
-
-bool Game::clean(){
-    if (this->core != NULL) delete this->core;
-    if (this->display != NULL) delete this->display;
-    if (this->input != NULL) delete this->input;
-    this->core = NULL;
-    this->display = NULL;
-    this->input = NULL;
-    return true;
-}
-
-bool Game::isExiting(){
-    return !this->core->isRunning;
-}
-
-RunGameCommand::RunGameCommand(){
-    this->game = new Game();
-}
-
-RunGameCommand::~RunGameCommand(){
-    if (this->game != NULL) delete this->game;
-    this->game = NULL;
-}
-
-ICommand::Result RunGameCommand::execute(){
-    this->game->init();
-    while (!game->isExiting()){
-        this->game->handleEvent();
-        this->game->update();
-        this->game->render();
-    }
-    this->game->clean();
-    return Result::SUCCESS;
-}
-
-// StartGameMenu::StartGameMenu(std::string _title, std::string _desc){
-//     insertNode(new MenuComponent(_title, _desc));
-//     insertNode(new MenuComponent("Start"));
-//     getChildData(0)->loadNextAction(new RunGameCommand());
-//     insertNode(new MenuComponent("Exit"));
-// }

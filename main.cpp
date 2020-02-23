@@ -3,10 +3,12 @@
 #include "Display.h"
 #include "Menu.h"
 #include "Game.h"
+#include "Input.h"
+
+#include <stack>
 
 int main(){
-    ICommand* run = new RunGameCommand();
-    run->execute();
-    delete run;
+    GameFramework framework;
+    framework.run();
     return 0;
 }
