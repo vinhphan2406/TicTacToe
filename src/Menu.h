@@ -180,6 +180,8 @@ class MenuComponent {
 #ifndef MENU_COMMAND_H
 #define MENU_COMMAND_H
 
+#include <iostream>
+
 // Interact with selected menu item (either execute a command or access another submenu)
 class ChooseOptionCommand : public ICommand {
     private:
@@ -216,6 +218,7 @@ class ReturnPreviousMenu : public ICommand {
 #define DISPLAY_MENU_H
 
 #include "Display.h"
+#include <iostream>
 
 class DisplayMenu : public IDisplay {
     private:

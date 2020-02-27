@@ -72,5 +72,4 @@ class IInput {
         virtual ~IInput() = default;
         virtual Object input() = 0;
 };
-
 #endif

@@ -6,14 +6,14 @@
         {
             "label": "g++ build active file",
             "type": "shell",
-            "command": "g++ -g *.cpp",
+            "command": "make TicTacToe",
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
             "problemMatcher": "$gcc",
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}/src"
             }
         }
     ]
